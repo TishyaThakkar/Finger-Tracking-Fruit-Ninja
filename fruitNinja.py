@@ -43,9 +43,9 @@ class Fruit:
         screen.blit(fruit_img, (self.x, self.y))
 
 # Button properties
-button_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 25, 100, 50)
-restart_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 50, 100, 50)
-quit_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 120, 100, 50)
+start_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 - 25, 100, 50)
+restart_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 50, 150, 50)
+quit_rect = pygame.Rect(WIDTH//2 - 50, HEIGHT//2 + 120, 150, 50)
 button_pressed_time = None
 started = False
 game_over = False
@@ -59,7 +59,7 @@ while running:
     
     frame = cv2.flip(frame, 1)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame_surface = pygame.surfarray.make_surface(np.rot90(cv2.flip(frame, 1)))
+    frame_surface = pygame.surfarray.make_surface(np.rot90(cv2.flip(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 1)))
     frame_surface = pygame.transform.scale(frame_surface, (WIDTH, HEIGHT))
     screen.blit(frame_surface, (0, 0))
     
@@ -74,45 +74,63 @@ while running:
             pygame.draw.circle(screen, (0, 255, 0), finger_pos, 10)  # Draw finger tracker
     
     if game_over:
+        restart_button_color = (255, 230, 150)
+        quit_button_color = (255, 100, 100)
+        if finger_pos:
+            if restart_rect.collidepoint(finger_pos):
+                if button_pressed_time is None:
+                    button_pressed_time = time.time()
+                elapsed_time = time.time() - button_pressed_time if button_pressed_time else 0
+                darkening_factor = min(100, int(elapsed_time / 3 * 100))
+                restart_button_color = (255 - darkening_factor, 230 - darkening_factor, 150 - darkening_factor)
+                if elapsed_time >= 2:
+                    started = False
+                    game_over = False
+                    fruits = []
+                    score = 0
+            elif quit_rect.collidepoint(finger_pos):
+                if button_pressed_time is None:
+                    button_pressed_time = time.time()
+                elapsed_time = time.time() - button_pressed_time if button_pressed_time else 0
+                darkening_factor = min(100, int(elapsed_time / 3 * 100))
+                quit_button_color = (255 - darkening_factor, 100 - darkening_factor, 100 - darkening_factor)
+                if elapsed_time >= 2:
+                    running = False
+            else:
+                button_pressed_time = None
+
         font = pygame.font.Font(None, 48)
         text = font.render(f"Final Score: {score}", True, (255, 255, 255))
         screen.blit(text, (WIDTH//2 - 100, HEIGHT//2 - 100))
-        
-        pygame.draw.rect(screen, (255, 230, 150), restart_rect, border_radius=25)
+
+        pygame.draw.rect(screen, restart_button_color, restart_rect, border_radius=25)
         restart_text = font.render("Restart", True, (0, 0, 0))
         screen.blit(restart_text, (restart_rect.x + 10, restart_rect.y + 10))
-        
+
         pygame.draw.rect(screen, (255, 100, 100), quit_rect, border_radius=25)
         quit_text = font.render("Quit", True, (0, 0, 0))
         screen.blit(quit_text, (quit_rect.x + 25, quit_rect.y + 10))
-        
-        if finger_pos:
-            if restart_rect.collidepoint(finger_pos):
-                started = False
-                game_over = False
-                fruits = []
-                score = 0
-            elif quit_rect.collidepoint(finger_pos):
-                running = False
-    
+
     elif not started:
         button_color = (255, 230, 150)  # Soft yellow color
-        if finger_pos and button_rect.collidepoint(finger_pos):
+        if finger_pos and start_rect.collidepoint(finger_pos):
             if button_pressed_time is None:
                 button_pressed_time = time.time()
             elapsed_time = time.time() - button_pressed_time if button_pressed_time else 0
             darkening_factor = min(100, int(elapsed_time / 3 * 100))
             button_color = (255 - darkening_factor, 230 - darkening_factor, 150 - darkening_factor)
-            if elapsed_time >= 3:
+            if elapsed_time >= 2:
                 started = True
                 button_pressed_time = None
         else:
             button_pressed_time = None
-        
-        pygame.draw.rect(screen, button_color, button_rect, border_radius=25)
+        font = pygame.font.Font(None, 48)
+        text = font.render("Finger Track Fruit Ninja", True, (255, 255, 255))
+        screen.blit(text, (200, HEIGHT//2-100))
+        pygame.draw.rect(screen, button_color, start_rect, border_radius=25)
         font = pygame.font.Font(None, 36)
         text = font.render("Start", True, (0, 0, 0))
-        screen.blit(text, (button_rect.x + 25, button_rect.y + 10))
+        screen.blit(text, (start_rect.x + 25, start_rect.y + 10))
     else:
         if random.randint(1, 50) == 1:  # Randomly spawn fruits
             fruits.append(Fruit(random.randint(50, WIDTH - 50), 0))
